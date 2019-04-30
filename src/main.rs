@@ -64,8 +64,10 @@ fn color(ray: &Ray, world: &Box<Hitable>, depth: i32) -> Vector3<f32> {
     if let Some(hit) = world.hit(ray, 0.001, f32::MAX) {
         let emitted = hit.material.emitted(hit.u, hit.v, &hit.p);
         if depth < 50 {
-            if let Some((scattered, attenuation)) = hit.material.scatter(&ray, &hit) {
-                return emitted + attenuation.zip_map(&color(&scattered, &world, depth+1), |l, r| l * r);
+            if let Some((scattered, attenuation, pdf)) = hit.material.scatter(&ray, &hit) {
+                let scattering_pdf = hit.material.scattering_pdf(&ray, &hit, &scattered);
+                return emitted + attenuation.zip_map(
+                    &(scattering_pdf * color(&scattered, &world, depth+1)), |l, r| l * r) / pdf;
             }
         }
         emitted
