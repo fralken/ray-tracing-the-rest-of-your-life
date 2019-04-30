@@ -35,10 +35,18 @@ impl<T: Texture> Lambertian<T> {
 
 impl<T: Texture> Material for Lambertian<T> {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>, f32)> {
-        let target = hit.p + hit.normal + random_in_unit_sphere();
-        let scattered = Ray::new(hit.p, (target - hit.p).normalize(), ray.time());
+        fn get_direction(normal: &Vector3<f32>) -> Vector3<f32> {
+            loop {
+                let direction = random_in_unit_sphere();
+                if direction.dot(&normal) >= 0.0 {
+                    return direction;
+                }
+            }
+        }
+
+        let scattered = Ray::new(hit.p, get_direction(&hit.normal).normalize(),ray.time());
         let albedo = self.albedo.value(hit.u, hit.v, &hit.p);
-        let pdf = hit.normal.dot(&scattered.direction()) / f32::consts::PI;
+        let pdf = 0.5 / f32::consts::PI;
         Some((scattered, albedo, pdf))
     }
 
