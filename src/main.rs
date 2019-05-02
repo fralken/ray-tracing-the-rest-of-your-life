@@ -32,7 +32,7 @@ fn cornell_box(aspect: f32) -> (Box<Hitable>, Camera) {
     let mut world = HitableList::default();
     world.push(FlipNormals::new(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, green)));
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, red));
-    world.push(AARect::new(Plane::ZX, 227.0, 332.0, 213.0, 343.0, 554.0, light));
+    world.push(FlipNormals::new(AARect::new(Plane::ZX, 227.0, 332.0, 213.0, 343.0, 554.0, light)));
     world.push(FlipNormals::new(AARect::new(Plane::ZX, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone())));
     world.push(AARect::new(Plane::ZX, 0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
     world.push(FlipNormals::new(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone())));
@@ -63,7 +63,7 @@ fn cornell_box(aspect: f32) -> (Box<Hitable>, Camera) {
 
 fn color(ray: &Ray, world: &Box<Hitable>, depth: i32) -> Vector3<f32> {
     if let Some(hit) = world.hit(ray, 0.001, f32::MAX) {
-        let emitted = hit.material.emitted(hit.u, hit.v, &hit.p);
+        let emitted = hit.material.emitted(&ray, &hit);
         if depth < 50 {
             if let Some((_, attenuation, _)) = hit.material.scatter(&ray, &hit) {
                 let mut rng = rand::thread_rng();

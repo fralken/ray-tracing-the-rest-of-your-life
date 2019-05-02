@@ -22,7 +22,7 @@ pub trait Material: Send + Sync {
 
     fn scattering_pdf(&self, ray: &Ray, hit: &HitRecord, scattered: &Ray) -> f32;
 
-    fn emitted(&self, u: f32, v: f32, p: &Vector3<f32>) -> Vector3<f32>;
+    fn emitted(&self, ray: &Ray, hit: &HitRecord) -> Vector3<f32>;
 }
 
 #[derive(Clone)]
@@ -49,7 +49,7 @@ impl<T: Texture> Material for Lambertian<T> {
         cosine / f32::consts::PI
     }
 
-    fn emitted(&self, _u: f32, _v: f32, _p: &Vector3<f32>) -> Vector3<f32> { Vector3::zeros() }
+    fn emitted(&self, _ray: &Ray, _hit: &HitRecord) -> Vector3<f32> { Vector3::zeros() }
 }
 
 #[derive(Clone)]
@@ -66,7 +66,11 @@ impl<T: Texture> Material for DiffuseLight<T> {
 
     fn scattering_pdf(&self, _ray: &Ray, _hit: &HitRecord, _scattered: &Ray) -> f32 { 1.0 }
 
-    fn emitted(&self, u: f32, v: f32, p: &Vector3<f32>) -> Vector3<f32> {
-        self.emit.value(u, v, &p)
+    fn emitted(&self, ray: &Ray, hit: &HitRecord) -> Vector3<f32> {
+        if hit.normal.dot(&ray.direction()) < 0.0 {
+            self.emit.value(hit.u, hit.v, &hit.p)
+        } else {
+            Vector3::zeros()
+        }
     }
 }
