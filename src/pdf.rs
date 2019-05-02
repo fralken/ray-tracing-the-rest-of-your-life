@@ -63,3 +63,27 @@ impl<'a> PDF for HitablePDF<'a> {
 
     fn generate(&self) -> Vector3<f32> { self.hitable.random(self.origin) }
 }
+
+pub struct MixturePDF<P: PDF, Q: PDF> {
+    p: P,
+    q: Q
+}
+
+impl<P: PDF, Q: PDF> MixturePDF<P, Q> {
+    pub fn new(p: P, q: Q) -> Self { MixturePDF { p, q } }
+}
+
+impl<P: PDF, Q: PDF> PDF for MixturePDF<P, Q> {
+    fn value(&self, direction: Vector3<f32>) -> f32 {
+        0.5 * self.p.value(direction) + 0.5 * self.q.value(direction)
+    }
+
+    fn generate(&self) -> Vector3<f32> {
+        let mut rng = rand::thread_rng();
+        if rng.gen::<bool>() {
+            self.p.generate()
+        } else {
+            self.q.generate()
+        }
+    }
+}
