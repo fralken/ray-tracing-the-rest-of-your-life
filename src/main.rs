@@ -24,7 +24,7 @@ use crate::cube::Cube;
 use crate::translate::Translate;
 use crate::rotate::{Rotate, Axis};
 use crate::camera::Camera;
-use crate::pdf::{PDF, CosinePDF};
+use crate::pdf::{PDF, HitablePDF};
 
 fn cornell_box(aspect: f32) -> (Box<Hitable>, Camera) {
     let red = Lambertian::new(ConstantTexture::new(0.65, 0.05, 0.05));
@@ -68,9 +68,11 @@ fn color(ray: &Ray, world: &Box<Hitable>, depth: i32) -> Vector3<f32> {
         let emitted = hit.material.emitted(&ray, &hit);
         if depth < 50 {
             if let Some((_, attenuation, _)) = hit.material.scatter(&ray, &hit) {
-                let pdf_fun = CosinePDF::new(&hit.normal);
+                let light = DiffuseLight::new(ConstantTexture::new(0.0, 0.0, 0.0));
+                let light_shape = AARect::new(Plane::ZX, 227.0, 332.0, 213.0, 343.0, 554.0, light);
+                let pdf_fun = HitablePDF::new(&light_shape, hit.p);
                 let scattered = Ray::new(hit.p, pdf_fun.generate(), ray.time());
-                let pdf = pdf_fun.value(&scattered.direction());
+                let pdf = pdf_fun.value(scattered.direction());
                 let scattering_pdf = hit.material.scattering_pdf(&ray, &hit, &scattered);
                 return emitted + attenuation.zip_map(
                     &(scattering_pdf * color(&scattered, &world, depth+1)), |l, r| l * r) / pdf;
@@ -85,7 +87,7 @@ fn color(ray: &Ray, world: &Box<Hitable>, depth: i32) -> Vector3<f32> {
 fn main() {
     let nx = 500;
     let ny = 500;
-    let ns = 1000;
+    let ns = 10;
     println!("P3\n{} {}\n255", nx, ny);
     let (world, cam) = cornell_box(nx as f32 / ny as f32);
     let image =

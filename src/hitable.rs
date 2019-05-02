@@ -16,6 +16,8 @@ pub struct HitRecord<'a> {
 pub trait Hitable: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
     fn bounding_box(&self, t0: f32, t1: f32) -> Option<AABB>;
+    fn pdf_value(&self, _o: Vector3<f32>, _v: Vector3<f32>) -> f32 { 0.0 }
+    fn random(&self, _o: Vector3<f32>) -> Vector3<f32> { Vector3::new(1.0, 0.0, 0.0) }
 }
 
 #[derive(Default)]

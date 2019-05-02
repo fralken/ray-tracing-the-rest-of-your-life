@@ -2,6 +2,7 @@ use std::f32;
 use nalgebra::Vector3;
 use rand::Rng;
 use crate::onb::ONB;
+use crate::hitable::Hitable;
 
 pub fn random_cosine_direction() -> Vector3<f32> {
     let mut rng = rand::thread_rng();
@@ -15,7 +16,7 @@ pub fn random_cosine_direction() -> Vector3<f32> {
 }
 
 pub trait PDF {
-    fn value(&self, direction: &Vector3<f32>) -> f32;
+    fn value(&self, direction: Vector3<f32>) -> f32;
     fn generate(&self) -> Vector3<f32>;
 }
 
@@ -24,13 +25,13 @@ pub struct CosinePDF {
 }
 
 impl CosinePDF {
-    pub fn new(w: &Vector3<f32>) -> Self {
+    pub fn new(w: Vector3<f32>) -> Self {
         CosinePDF { uvw: ONB::build_from_w(&w) }
     }
 }
 
 impl PDF for CosinePDF {
-    fn value(&self, direction: &Vector3<f32>) -> f32 {
+    fn value(&self, direction: Vector3<f32>) -> f32 {
         let cosine = direction.normalize().dot(&self.uvw.w());
         if cosine > 0.0 {
             cosine / f32::consts::PI
@@ -42,4 +43,23 @@ impl PDF for CosinePDF {
     fn generate(&self) -> Vector3<f32> {
         self.uvw.local(&random_cosine_direction())
     }
+}
+
+pub struct HitablePDF<'a> {
+    origin: Vector3<f32>,
+    hitable: &'a Hitable
+}
+
+impl<'a> HitablePDF<'a> {
+    pub fn new(hitable: &'a Hitable, origin: Vector3<f32>) -> Self {
+        HitablePDF { origin, hitable }
+    }
+}
+
+impl<'a> PDF for HitablePDF<'a> {
+    fn value(&self, direction: Vector3<f32>) -> f32 {
+        self.hitable.pdf_value(self.origin, direction)
+    }
+
+    fn generate(&self) -> Vector3<f32> { self.hitable.random(self.origin) }
 }
