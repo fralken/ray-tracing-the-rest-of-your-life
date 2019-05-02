@@ -1,21 +1,10 @@
 use std::f32;
 use nalgebra::Vector3;
-use rand::Rng;
 use crate::ray::Ray;
 use crate::hitable::HitRecord;
 use crate::texture::Texture;
 use crate::onb::ONB;
-
-fn random_cosine_direction() -> Vector3<f32> {
-    let mut rng = rand::thread_rng();
-    let r1 = rng.gen::<f32>();
-    let r2 = rng.gen::<f32>();
-    let z = (1.0 - r2).sqrt();
-    let phi = 2.0 * f32::consts::PI * r1;
-    let x = phi.cos() * 2.0 * r2.sqrt();
-    let y = phi.sin() * 2.0 * r2.sqrt();
-    Vector3::new(x, y, z)
-}
+use crate::pdf::*;
 
 pub trait Material: Send + Sync {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>, f32)>;

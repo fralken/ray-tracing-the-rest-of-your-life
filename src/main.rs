@@ -9,6 +9,7 @@ mod rotate;
 mod camera;
 mod aabb;
 mod onb;
+mod pdf;
 
 use std::f32;
 use nalgebra::Vector3;
@@ -23,6 +24,7 @@ use crate::cube::Cube;
 use crate::translate::Translate;
 use crate::rotate::{Rotate, Axis};
 use crate::camera::Camera;
+use crate::pdf::{PDF, CosinePDF};
 
 fn cornell_box(aspect: f32) -> (Box<Hitable>, Camera) {
     let red = Lambertian::new(ConstantTexture::new(0.65, 0.05, 0.05));
@@ -66,21 +68,9 @@ fn color(ray: &Ray, world: &Box<Hitable>, depth: i32) -> Vector3<f32> {
         let emitted = hit.material.emitted(&ray, &hit);
         if depth < 50 {
             if let Some((_, attenuation, _)) = hit.material.scatter(&ray, &hit) {
-                let mut rng = rand::thread_rng();
-                let on_light = Vector3::new(213.0 + rng.gen::<f32>() * (343.0 - 213.0), 554.0, 227.0 + rng.gen::<f32>() * (332.0 - 227.0));
-                let to_light = on_light - hit.p;
-                let distance_squared = to_light.norm_squared();
-                let to_light_normalized = to_light.normalize();
-                if to_light_normalized.dot(&hit.normal) < 0.0 {
-                    return emitted
-                }
-                let light_area = (343.0 - 213.0) * (332.0 - 227.0);
-                let light_cosine = to_light_normalized.y.abs();
-                if light_cosine < 0.000001 {
-                    return emitted
-                }
-                let pdf = distance_squared / (light_cosine * light_area);
-                let scattered = Ray::new(hit.p, to_light_normalized, ray.time());
+                let pdf_fun = CosinePDF::new(&hit.normal);
+                let scattered = Ray::new(hit.p, pdf_fun.generate(), ray.time());
+                let pdf = pdf_fun.value(&scattered.direction());
                 let scattering_pdf = hit.material.scattering_pdf(&ray, &hit, &scattered);
                 return emitted + attenuation.zip_map(
                     &(scattering_pdf * color(&scattered, &world, depth+1)), |l, r| l * r) / pdf;
@@ -95,7 +85,7 @@ fn color(ray: &Ray, world: &Box<Hitable>, depth: i32) -> Vector3<f32> {
 fn main() {
     let nx = 500;
     let ny = 500;
-    let ns = 10;
+    let ns = 1000;
     println!("P3\n{} {}\n255", nx, ny);
     let (world, cam) = cornell_box(nx as f32 / ny as f32);
     let image =
