@@ -8,6 +8,7 @@ mod translate;
 mod rotate;
 mod camera;
 mod aabb;
+mod onb;
 
 use std::f32;
 use nalgebra::Vector3;
