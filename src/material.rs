@@ -21,6 +21,24 @@ fn reflect(v: &Vector3<f32>, n: &Vector3<f32>) -> Vector3<f32> {
     v - 2.0 * v.dot(&n) * n
 }
 
+
+fn refract(v: &Vector3<f32>, n: &Vector3<f32>, ni_over_nt: f32) -> Option<Vector3<f32>> {
+    let uv = v.normalize();
+    let dt = uv.dot(&n);
+    let discriminant = 1.0 - ni_over_nt.powi(2) * (1.0 - dt.powi(2));
+    if discriminant > 0.0 {
+        let refracted = ni_over_nt * (uv - n * dt) - n * discriminant.sqrt();
+        Some(refracted)
+    } else {
+        None
+    }
+}
+
+fn schlick(cosine: f32, ref_idx: f32) -> f32 {
+    let r0 = ((1.0 - ref_idx) / (1.0 + ref_idx)).powi(2);
+    r0 + (1.0 -r0) * (1.0 - cosine).powi(5)
+}
+
 pub enum ScatterRecord<'a> {
     Specular { specular_ray: Ray, attenuation: Vector3<f32> },
     Scatter { pdf: PDF<'a>, attenuation: Vector3<f32> }
@@ -81,6 +99,42 @@ impl Material for Metal {
         } else {
             None
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct Dielectric {
+    ref_idx: f32
+}
+
+impl Dielectric {
+    pub fn new(ref_idx: f32) -> Self { Dielectric { ref_idx } }
+}
+
+impl Material for Dielectric {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<ScatterRecord> {
+        let attenuation = Vector3::new(1.0, 1.0, 1.0);
+        let (outward_normal, ni_over_nt, cosine) = if ray.direction().dot(&hit.normal) > 0.0 {
+            let cosine = self.ref_idx * ray.direction().dot(&hit.normal) / ray.direction().magnitude();
+            (-hit.normal, self.ref_idx, cosine)
+        } else {
+            let cosine = -ray.direction().dot(&hit.normal) / ray.direction().magnitude();
+            (hit.normal, 1.0 / self.ref_idx, cosine)
+        };
+        if let Some(refracted) = refract(&ray.direction(), &outward_normal, ni_over_nt) {
+            let reflect_prob = schlick(cosine, self.ref_idx);
+            if rand::thread_rng().gen::<f32>() >= reflect_prob {
+                return Some(ScatterRecord::Specular {
+                    specular_ray: Ray::new(hit.p, refracted, ray.time()),
+                    attenuation
+                })
+            }
+        }
+        let reflected = reflect(&ray.direction(), &hit.normal);
+        Some(ScatterRecord::Specular {
+            specular_ray: Ray::new(hit.p, reflected, ray.time()),
+            attenuation
+        })
     }
 }
 

@@ -2,6 +2,7 @@ mod ray;
 mod hitable;
 mod texture;
 mod material;
+mod sphere;
 mod rect;
 mod cube;
 mod translate;
@@ -17,8 +18,9 @@ use rand::Rng;
 use rayon::prelude::*;
 use crate::ray::Ray;
 use crate::texture::ConstantTexture;
-use crate::material::{ScatterRecord, Lambertian, Metal, DiffuseLight};
+use crate::material::{ScatterRecord, Lambertian, Dielectric, DiffuseLight};
 use crate::hitable::{Hitable, HitableList, FlipNormals};
+use crate::sphere::Sphere;
 use crate::rect::{AARect, Plane};
 use crate::cube::Cube;
 use crate::translate::Translate;
@@ -31,25 +33,21 @@ fn cornell_box(aspect: f32) -> (Box<Hitable>, Box<Hitable>, Camera) {
     let white = Lambertian::new(ConstantTexture::new(0.73, 0.73, 0.73));
     let green = Lambertian::new(ConstantTexture::new(0.12, 0.45, 0.15));
     let light = DiffuseLight::new(ConstantTexture::new(15.0, 15.0, 15.0));
-    let aluminum = Metal::new(Vector3::new(0.8, 0.85, 0.88), 0.0);
+    let glass = Dielectric::new(1.5);
+    let light_shape = AARect::new(Plane::ZX, 227.0, 332.0, 213.0, 343.0, 554.0, light);
+    let glass_sphere = Sphere::new(Vector3::new(190.0, 90.0, 190.0), 90.0, glass);
     let mut world = HitableList::default();
     world.push(FlipNormals::new(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, green)));
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, red));
-    let light_shape = AARect::new(Plane::ZX, 227.0, 332.0, 213.0, 343.0, 554.0, light);
     world.push(FlipNormals::new(light_shape.clone()));
     world.push(FlipNormals::new(AARect::new(Plane::ZX, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone())));
     world.push(AARect::new(Plane::ZX, 0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
     world.push(FlipNormals::new(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone())));
+    world.push(glass_sphere.clone());
     world.push(
         Translate::new(
             Rotate::new(Axis::Y,
-                        Cube::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(165.0, 165.0, 165.0), white),
-                        -18.0),
-            Vector3::new(130.0, 0.0, 65.0)));
-    world.push(
-        Translate::new(
-            Rotate::new(Axis::Y,
-                        Cube::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(165.0, 330.0, 165.0), aluminum),
+                        Cube::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(165.0, 330.0, 165.0), white),
                         15.0),
             Vector3::new(265.0, 0.0, 295.0)));
 
@@ -62,7 +60,7 @@ fn cornell_box(aspect: f32) -> (Box<Hitable>, Box<Hitable>, Camera) {
         look_from, look_at, Vector3::new(0.0, 1.0, 0.0),
         vertical_fov, aspect, aperture, focus_dist, 0.0, 1.0);
 
-    (Box::new(world), Box::new(light_shape), cam)
+    (Box::new(world), Box::new(glass_sphere), cam)
 }
 
 fn color(ray: &Ray, world: &Box<Hitable>, light_shape: &Box<Hitable>, depth: i32) -> Vector3<f32> {
