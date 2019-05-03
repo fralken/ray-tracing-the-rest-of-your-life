@@ -1,4 +1,5 @@
 use nalgebra::Vector3;
+use rand::seq::SliceRandom;
 use crate::ray::Ray;
 use crate::material::Material;
 use crate::aabb;
@@ -59,6 +60,14 @@ impl Hitable for HitableList {
                 },
             _ => None
         }
+    }
+
+    fn pdf_value(&self, o: Vector3<f32>, v: Vector3<f32>) -> f32 {
+        self.list.iter().map(|h| h.pdf_value(o, v)).sum::<f32>() / self.list.len() as f32
+    }
+
+    fn random(&self, o: Vector3<f32>) -> Vector3<f32> {
+        self.list.choose(&mut rand::thread_rng()).unwrap().random(o)
     }
 }
 

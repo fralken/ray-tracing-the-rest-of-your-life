@@ -51,6 +51,10 @@ fn cornell_box(aspect: f32) -> (Box<Hitable>, Box<Hitable>, Camera) {
                         15.0),
             Vector3::new(265.0, 0.0, 295.0)));
 
+    let mut light_shapes = HitableList::default();
+    light_shapes.push(light_shape);
+    light_shapes.push(glass_sphere);
+
     let look_from = Vector3::new(278.0, 278.0, -800.0);
     let look_at = Vector3::new(278.0, 278.0, 0.0);
     let focus_dist = 10.0;
@@ -60,7 +64,7 @@ fn cornell_box(aspect: f32) -> (Box<Hitable>, Box<Hitable>, Camera) {
         look_from, look_at, Vector3::new(0.0, 1.0, 0.0),
         vertical_fov, aspect, aperture, focus_dist, 0.0, 1.0);
 
-    (Box::new(world), Box::new(glass_sphere), cam)
+    (Box::new(world), Box::new(light_shapes), cam)
 }
 
 fn color(ray: &Ray, world: &Box<Hitable>, light_shape: &Box<Hitable>, depth: i32) -> Vector3<f32> {
