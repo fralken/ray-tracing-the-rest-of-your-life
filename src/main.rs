@@ -17,37 +17,39 @@ use rand::Rng;
 use rayon::prelude::*;
 use crate::ray::Ray;
 use crate::texture::ConstantTexture;
-use crate::material::{Lambertian, DiffuseLight};
+use crate::material::{ScatterRecord, Lambertian, Metal, DiffuseLight};
 use crate::hitable::{Hitable, HitableList, FlipNormals};
 use crate::rect::{AARect, Plane};
 use crate::cube::Cube;
 use crate::translate::Translate;
 use crate::rotate::{Rotate, Axis};
 use crate::camera::Camera;
-use crate::pdf::{PDF, HitablePDF, CosinePDF, MixturePDF};
+use crate::pdf::PDF;
 
-fn cornell_box(aspect: f32) -> (Box<Hitable>, Camera) {
+fn cornell_box(aspect: f32) -> (Box<Hitable>, Box<Hitable>, Camera) {
     let red = Lambertian::new(ConstantTexture::new(0.65, 0.05, 0.05));
     let white = Lambertian::new(ConstantTexture::new(0.73, 0.73, 0.73));
     let green = Lambertian::new(ConstantTexture::new(0.12, 0.45, 0.15));
     let light = DiffuseLight::new(ConstantTexture::new(15.0, 15.0, 15.0));
+    let aluminum = Metal::new(Vector3::new(0.8, 0.85, 0.88), 0.0);
     let mut world = HitableList::default();
     world.push(FlipNormals::new(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, green)));
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, red));
-    world.push(FlipNormals::new(AARect::new(Plane::ZX, 227.0, 332.0, 213.0, 343.0, 554.0, light)));
+    let light_shape = AARect::new(Plane::ZX, 227.0, 332.0, 213.0, 343.0, 554.0, light);
+    world.push(FlipNormals::new(light_shape.clone()));
     world.push(FlipNormals::new(AARect::new(Plane::ZX, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone())));
     world.push(AARect::new(Plane::ZX, 0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
     world.push(FlipNormals::new(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone())));
     world.push(
         Translate::new(
             Rotate::new(Axis::Y,
-                        Cube::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(165.0, 165.0, 165.0), white.clone()),
+                        Cube::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(165.0, 165.0, 165.0), white),
                         -18.0),
             Vector3::new(130.0, 0.0, 65.0)));
     world.push(
         Translate::new(
             Rotate::new(Axis::Y,
-                        Cube::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(165.0, 330.0, 165.0), white),
+                        Cube::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(165.0, 330.0, 165.0), aluminum),
                         15.0),
             Vector3::new(265.0, 0.0, 295.0)));
 
@@ -60,24 +62,29 @@ fn cornell_box(aspect: f32) -> (Box<Hitable>, Camera) {
         look_from, look_at, Vector3::new(0.0, 1.0, 0.0),
         vertical_fov, aspect, aperture, focus_dist, 0.0, 1.0);
 
-    (Box::new(world), cam)
+    (Box::new(world), Box::new(light_shape), cam)
 }
 
-fn color(ray: &Ray, world: &Box<Hitable>, depth: i32) -> Vector3<f32> {
+fn color(ray: &Ray, world: &Box<Hitable>, light_shape: &Box<Hitable>, depth: i32) -> Vector3<f32> {
     if let Some(hit) = world.hit(ray, 0.001, f32::MAX) {
         let emitted = hit.material.emitted(&ray, &hit);
         if depth < 50 {
-            if let Some((_, attenuation, _)) = hit.material.scatter(&ray, &hit) {
-                let light = DiffuseLight::new(ConstantTexture::new(0.0, 0.0, 0.0));
-                let light_shape = AARect::new(Plane::ZX, 227.0, 332.0, 213.0, 343.0, 554.0, light);
-                let hitable_pdf = HitablePDF::new(&light_shape, hit.p);
-                let cosine_pdf = CosinePDF::new(hit.normal);
-                let pdf_fun = MixturePDF::new(hitable_pdf, cosine_pdf);
-                let scattered = Ray::new(hit.p, pdf_fun.generate(), ray.time());
-                let pdf = pdf_fun.value(scattered.direction());
-                let scattering_pdf = hit.material.scattering_pdf(&ray, &hit, &scattered);
-                return emitted + attenuation.zip_map(
-                    &(scattering_pdf * color(&scattered, &world, depth+1)), |l, r| l * r) / pdf;
+            if let Some(scatter) = hit.material.scatter(&ray, &hit) {
+                match scatter {
+                    ScatterRecord::Specular { specular_ray, attenuation } => {
+                        return attenuation.zip_map(
+                            &color(&specular_ray, &world, &light_shape, depth+1), |l, r| l * r)
+                    }
+                    ScatterRecord::Scatter { pdf, attenuation } => {
+                        let hitable_pdf = PDF::hitable(&light_shape, hit.p);
+                        let pdf_fun = PDF::mixture(&hitable_pdf, &pdf);
+                        let scattered = Ray::new(hit.p, pdf_fun.generate(), ray.time());
+                        let pdf_val = pdf_fun.value(scattered.direction());
+                        let scattering_pdf = hit.material.scattering_pdf(&ray, &hit, &scattered);
+                        return emitted + attenuation.zip_map(
+                            &(scattering_pdf * color(&scattered, &world, &light_shape, depth+1)), |l, r| l * r) / pdf_val
+                    }
+                }
             }
         }
         emitted
@@ -91,7 +98,7 @@ fn main() {
     let ny = 500;
     let ns = 1000;
     println!("P3\n{} {}\n255", nx, ny);
-    let (world, cam) = cornell_box(nx as f32 / ny as f32);
+    let (world, light_shape, cam) = cornell_box(nx as f32 / ny as f32);
     let image =
         (0..ny).into_par_iter().rev()
             .flat_map(|y|
@@ -101,7 +108,7 @@ fn main() {
                         let u = (x as f32 + rng.gen::<f32>()) / nx as f32;
                         let v = (y as f32 + rng.gen::<f32>()) / ny as f32;
                         let ray = cam.get_ray(u, v);
-                        color(&ray, &world, 0)
+                        color(&ray, &world, &light_shape, 0)
                     }).sum();
                     col.iter().map(|c|
                         (255.99 * (c / ns as f32).sqrt().max(0.0).min(1.0)) as u8

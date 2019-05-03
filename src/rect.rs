@@ -6,12 +6,14 @@ use crate::hitable::{Hitable, HitRecord};
 use crate::material::Material;
 use crate::aabb::AABB;
 
+#[derive(Clone)]
 pub enum Plane {
     YZ,
     ZX,
     XY
 }
 
+#[derive(Clone)]
 pub struct AARect<M: Material> {
     plane: Plane,
     a0: f32,
@@ -69,7 +71,7 @@ impl<M: Material> Hitable for AARect<M> {
             let area = (self.a1 - self.a0) * (self.b1 - self.b0);
             let distance_squared = hit.t.powi(2) * v.norm_squared();
             let cosine = v.dot(&hit.normal).abs() / v.norm();
-            distance_squared / (cosine * area)
+            if cosine != 0.0 { distance_squared / (cosine * area) } else { 0.0 }
         } else {
             0.0
         }
