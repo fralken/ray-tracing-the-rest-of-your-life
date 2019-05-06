@@ -18,7 +18,7 @@ use rand::Rng;
 use rayon::prelude::*;
 use crate::ray::Ray;
 use crate::texture::ConstantTexture;
-use crate::material::{ScatterRecord, Lambertian, Dielectric, DiffuseLight};
+use crate::material::{ScatterRecord, Lambertian, Metal, Dielectric, DiffuseLight};
 use crate::hitable::{Hitable, HitableList, FlipNormals};
 use crate::sphere::Sphere;
 use crate::rect::{AARect, Plane};
@@ -34,6 +34,7 @@ fn cornell_box(aspect: f32) -> (Box<Hitable>, Box<Hitable>, Camera) {
     let green = Lambertian::new(ConstantTexture::new(0.12, 0.45, 0.15));
     let light = DiffuseLight::new(ConstantTexture::new(15.0, 15.0, 15.0));
     let glass = Dielectric::new(1.5);
+    let aluminum = Metal::new(Vector3::new(0.8, 0.85, 0.88), 0.0);
     let light_shape = AARect::new(Plane::ZX, 227.0, 332.0, 213.0, 343.0, 554.0, light);
     let glass_sphere = Sphere::new(Vector3::new(190.0, 90.0, 190.0), 90.0, glass);
     let mut world = HitableList::default();
@@ -47,7 +48,7 @@ fn cornell_box(aspect: f32) -> (Box<Hitable>, Box<Hitable>, Camera) {
     world.push(
         Translate::new(
             Rotate::new(Axis::Y,
-                        Cube::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(165.0, 330.0, 165.0), white),
+                        Cube::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(165.0, 330.0, 165.0), aluminum),
                         15.0),
             Vector3::new(265.0, 0.0, 295.0)));
 
