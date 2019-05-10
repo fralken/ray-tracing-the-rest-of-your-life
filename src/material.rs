@@ -44,7 +44,7 @@ pub enum ScatterRecord<'a> {
     Scatter { pdf: PDF<'a>, attenuation: Vector3<f32> }
 }
 
-pub trait Material: Send + Sync {
+pub trait Material: Sync {
     fn scatter(&self, _ray: &Ray, _hit: &HitRecord) -> Option<ScatterRecord> { None }
 
     fn scattering_pdf(&self, _ray: &Ray, _hit: &HitRecord, _scattered: &Ray) -> f32 { 1.0 }
