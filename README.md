@@ -1,6 +1,6 @@
 ## Ray tracing: the rest of your life, in Rust
 
-This is an implementation in Rust of [Peter Shirley's "Ray Tracing: The Rest Of Your Life"](https://github.com/petershirley/raytracingtherestofyourlife) book.
+This is an implementation in Rust of [Peter Shirley's "Ray Tracing: The Rest Of Your Life"](https://raytracing.github.io/books/RayTracingTheRestOfYourLife.html) book.
 This is the third of the series:
 
 - [Ray tracing in one weekend, in Rust](https://github.com/fralken/ray-tracing-in-one-weekend)
