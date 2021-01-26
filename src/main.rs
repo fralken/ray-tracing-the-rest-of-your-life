@@ -28,7 +28,7 @@ use crate::rotate::{Rotate, Axis};
 use crate::camera::Camera;
 use crate::pdf::PDF;
 
-fn cornell_box(aspect: f32) -> (Box<Hitable>, Box<Hitable>, Camera) {
+fn cornell_box(aspect: f32) -> (Box<dyn Hitable>, Box<dyn Hitable>, Camera) {
     let red = Lambertian::new(ConstantTexture::new(0.65, 0.05, 0.05));
     let white = Lambertian::new(ConstantTexture::new(0.73, 0.73, 0.73));
     let green = Lambertian::new(ConstantTexture::new(0.12, 0.45, 0.15));
@@ -68,7 +68,7 @@ fn cornell_box(aspect: f32) -> (Box<Hitable>, Box<Hitable>, Camera) {
     (Box::new(world), Box::new(light_shapes), cam)
 }
 
-fn color(ray: &Ray, world: &Box<Hitable>, light_shape: &Box<Hitable>, depth: i32) -> Vector3<f32> {
+fn color(ray: &Ray, world: &Box<dyn Hitable>, light_shape: &Box<dyn Hitable>, depth: i32) -> Vector3<f32> {
     if let Some(hit) = world.hit(ray, 0.001, f32::MAX) {
         let emitted = hit.material.emitted(&ray, &hit);
         if depth < 50 {

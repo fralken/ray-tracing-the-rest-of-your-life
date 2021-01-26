@@ -23,6 +23,7 @@ pub struct AABB {
 impl AABB {
     pub fn new(min: Vector3<f32>, max: Vector3<f32>) -> Self { AABB { min, max } }
 
+    #[allow(dead_code)]
     pub fn hit(&self, ray: &Ray, mut t_min: f32, mut t_max: f32) -> bool {
         for a in 0..3 {
             let inv_d = 1.0 / ray.direction()[a];

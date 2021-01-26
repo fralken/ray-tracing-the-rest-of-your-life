@@ -17,7 +17,7 @@ fn random_cosine_direction() -> Vector3<f32> {
 
 pub enum PDF<'a> {
     Cosine { uvw: ONB },
-    Hitable { origin: Vector3<f32>, hitable: &'a Box<Hitable> },
+    Hitable { origin: Vector3<f32>, hitable: &'a Box<dyn Hitable> },
     Mixture { p: &'a PDF<'a>, q: &'a PDF<'a> }
 }
 
@@ -26,7 +26,7 @@ impl<'a> PDF<'a> {
         PDF::Cosine { uvw: ONB::build_from_w(&w) }
     }
 
-    pub fn hitable(hitable: &'a Box<Hitable>, origin: Vector3<f32>) -> Self {
+    pub fn hitable(hitable: &'a Box<dyn Hitable>, origin: Vector3<f32>) -> Self {
         PDF::Hitable { origin, hitable }
     }
 
