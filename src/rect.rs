@@ -81,8 +81,8 @@ impl<M: Material> Hitable for AARect<M> {
         let mut rng = rand::thread_rng();
         let (k_axis, a_axis, b_axis) = get_axis(&self.plane);
         let mut random_point = Vector3::zeros();
-        random_point[a_axis] = rng.gen_range(&self.a0, &self.a1);
-        random_point[b_axis] = rng.gen_range(&self.b0, &self.b1);
+        random_point[a_axis] = rng.gen_range(self.a0..self.a1);
+        random_point[b_axis] = rng.gen_range(self.b0..self.b1);
         random_point[k_axis] = self.k;
         random_point - o
     }
